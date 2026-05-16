@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
@@ -64,6 +66,14 @@ class SelectPaymentMethod extends CheckoutEvent {
   const SelectPaymentMethod({required this.paymentMethodCode});
   @override
   List<Object?> get props => [paymentMethodCode];
+}
+
+/// Complete payment gateway flow (e.g., Midtrans) before placing order
+class CompletePaymentGateway extends CheckoutEvent {
+  final bool success;
+  const CompletePaymentGateway({required this.success});
+  @override
+  List<Object?> get props => [success];
 }
 
 /// Apply coupon code
@@ -148,6 +158,10 @@ class CheckoutState extends Equatable {
   // Payment methods (fetched after shipping saved)
   final List<PaymentMethod> paymentMethods;
   final String? selectedPaymentMethod;
+  final bool paymentMethodSaved;
+  final bool awaitingPaymentGateway;
+  final String? paymentGatewayUrl;
+  final String? paymentGatewayData;
 
   /// Whether the cart contains only virtual products
   final bool isVirtualOnly;
@@ -179,6 +193,10 @@ class CheckoutState extends Equatable {
     this.selectedShippingMethod,
     this.paymentMethods = const [],
     this.selectedPaymentMethod,
+    this.paymentMethodSaved = false,
+    this.awaitingPaymentGateway = false,
+    this.paymentGatewayUrl,
+    this.paymentGatewayData,
     this.isVirtualOnly = false,
     this.couponCode,
     this.errorMessage,
@@ -198,7 +216,8 @@ class CheckoutState extends Equatable {
       addressConfirmed &&
       (isVirtualOnly || selectedShippingMethod != null) &&
       selectedPaymentMethod != null &&
-      !isPlacingOrder;
+      !isPlacingOrder &&
+      !awaitingPaymentGateway;
 
   CheckoutState copyWith({
     CheckoutStatus? status,
@@ -213,6 +232,10 @@ class CheckoutState extends Equatable {
     String? selectedShippingMethod,
     List<PaymentMethod>? paymentMethods,
     String? selectedPaymentMethod,
+    bool? paymentMethodSaved,
+    bool? awaitingPaymentGateway,
+    String? paymentGatewayUrl,
+    String? paymentGatewayData,
     bool? isVirtualOnly,
     String? couponCode,
     String? errorMessage,
@@ -230,6 +253,7 @@ class CheckoutState extends Equatable {
     bool clearSelectedAddress = false,
     bool clearSelectedShippingMethod = false,
     bool clearSelectedPaymentMethod = false,
+    bool clearPaymentGateway = false,
   }) {
     return CheckoutState(
       status: status ?? this.status,
@@ -251,6 +275,15 @@ class CheckoutState extends Equatable {
       selectedPaymentMethod: clearSelectedPaymentMethod
           ? null
           : (selectedPaymentMethod ?? this.selectedPaymentMethod),
+      paymentMethodSaved: paymentMethodSaved ?? this.paymentMethodSaved,
+      awaitingPaymentGateway:
+          awaitingPaymentGateway ?? this.awaitingPaymentGateway,
+      paymentGatewayUrl: clearPaymentGateway
+          ? null
+          : (paymentGatewayUrl ?? this.paymentGatewayUrl),
+      paymentGatewayData: clearPaymentGateway
+          ? null
+          : (paymentGatewayData ?? this.paymentGatewayData),
       couponCode: couponCode ?? this.couponCode,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
       successMessage: clearSuccess
@@ -283,6 +316,10 @@ class CheckoutState extends Equatable {
     selectedShippingMethod,
     paymentMethods,
     selectedPaymentMethod,
+    paymentMethodSaved,
+    awaitingPaymentGateway,
+    paymentGatewayUrl,
+    paymentGatewayData,
     couponCode,
     errorMessage,
     successMessage,
@@ -320,6 +357,7 @@ class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
     on<SelectSavedAddress>(_onSelectSavedAddress);
     on<SelectShippingMethod>(_onSelectShippingMethod);
     on<SelectPaymentMethod>(_onSelectPaymentMethod);
+    on<CompletePaymentGateway>(_onCompletePaymentGateway);
     on<ApplyCheckoutCoupon>(_onApplyCoupon);
     on<RemoveCheckoutCoupon>(_onRemoveCoupon);
     on<ToggleSameAddress>(_onToggleSameAddress);
@@ -827,6 +865,9 @@ class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
         clearSelectedShippingMethod: true,
         paymentMethods: const [],
         clearSelectedPaymentMethod: true,
+        paymentMethodSaved: false,
+        awaitingPaymentGateway: false,
+        clearPaymentGateway: true,
         isLoading: true,
       ),
     );
@@ -1150,6 +1191,9 @@ class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
     emit(
       state.copyWith(
         selectedShippingMethod: event.shippingMethodCode,
+        paymentMethodSaved: false,
+        awaitingPaymentGateway: false,
+        clearPaymentGateway: true,
         isLoading: true,
         clearError: true,
       ),
@@ -1215,7 +1259,14 @@ class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
     SelectPaymentMethod event,
     Emitter<CheckoutState> emit,
   ) {
-    emit(state.copyWith(selectedPaymentMethod: event.paymentMethodCode));
+    emit(
+      state.copyWith(
+        selectedPaymentMethod: event.paymentMethodCode,
+        paymentMethodSaved: false,
+        awaitingPaymentGateway: false,
+        clearPaymentGateway: true,
+      ),
+    );
   }
 
   /// 5) Place order: save payment method → create order.
@@ -1394,6 +1445,9 @@ class CheckoutBloc extends Bloc<CheckoutEvent, CheckoutState> {
         clearSelectedShippingMethod: true,
         paymentMethods: const [],
         clearSelectedPaymentMethod: true,
+        paymentMethodSaved: false,
+        awaitingPaymentGateway: false,
+        clearPaymentGateway: true,
       ),
     );
   }
