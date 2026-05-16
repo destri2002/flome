@@ -19,7 +19,8 @@ class HomeRepository {
   Future<List<ThemeCustomization>> fetchThemeCustomizations() async {
     // Read the user's preferred locale for selecting the right translation
     final prefs = await SharedPreferences.getInstance();
-    final locale = prefs.getString(LocaleCubit.localeKey) ?? 'en';
+    final locale =
+        prefs.getString(LocaleCubit.localeKey) ?? LocaleCubit.defaultLocaleCode;
 
     final result = await _client.query(
       QueryOptions(

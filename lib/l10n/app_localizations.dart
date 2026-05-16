@@ -107,6 +107,7 @@ abstract class AppLocalizations {
     Locale('en'),
     Locale('es'),
     Locale('fr'),
+    Locale('id'),
     Locale('it'),
     Locale('nl'),
     Locale('ru'),
@@ -3251,6 +3252,7 @@ class _AppLocalizationsDelegate
     'en',
     'es',
     'fr',
+    'id',
     'it',
     'nl',
     'ru',
@@ -3275,6 +3277,8 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
       return AppLocalizationsEs();
     case 'fr':
       return AppLocalizationsFr();
+    case 'id':
+      return AppLocalizationsEn('id');
     case 'it':
       return AppLocalizationsIt();
     case 'nl':

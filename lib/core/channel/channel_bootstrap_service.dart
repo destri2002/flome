@@ -123,6 +123,19 @@ class ChannelBootstrapService {
     final supportedCodes = AppLocalizations.supportedLocales
         .map((locale) => locale.languageCode.toLowerCase())
         .toSet();
+    final preferredDefault = LocaleCubit.defaultLocaleCode;
+
+    if (supportedCodes.contains(preferredDefault)) {
+      for (final locale in locales) {
+        final languageCode = locale.code
+            .toLowerCase()
+            .split(RegExp('[-_]'))
+            .first;
+        if (languageCode == preferredDefault) {
+          return locale.code;
+        }
+      }
+    }
 
     if (rawDefault != null &&
         supportedCodes.contains(rawDefault.toLowerCase())) {

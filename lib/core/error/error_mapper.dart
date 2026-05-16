@@ -17,11 +17,11 @@ import '../../l10n/app_localizations.dart';
 class ErrorMapper {
   ErrorMapper._(); // prevent instantiation
 
-  static String _localeCode = 'en';
+  static String _localeCode = 'id';
 
   /// Update locale code so error messages are localized even outside widget tree.
   static void updateLocale(Locale? locale) {
-    _localeCode = locale?.languageCode ?? 'en';
+    _localeCode = locale?.languageCode ?? 'id';
   }
 
   static AppLocalizations _l10n() {
